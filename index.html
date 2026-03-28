@@ -5,6 +5,13 @@
   <title>出席簿</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+
+    #versionLabel {
+  font-size: 12px;
+  color: #888;
+  font-weight: normal;
+  margin-left: 8px;
+}
     body {
   font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
   font-size: 20px;
@@ -99,7 +106,7 @@ select, input {
 </head>
 <body>
 
-  <h1>出席簿</h1>
+  <h1>出席簿 <span id="versionLabel"></span></h1>
 
   日付: 
 <input type="date" id="date">
@@ -158,6 +165,7 @@ select, input {
   <script>
    let members = [];
    let attendance = {};
+   const APP_VERSION = "v1.4";
 
     // =========================
     // ここを自分のシート情報に合わせる
@@ -177,6 +185,7 @@ select, input {
 // 初期化
 // =========================
 initSheetSelect();
+document.getElementById("versionLabel").textContent = APP_VERSION;
 function initCountSelects() {
   const ids = ["missionary", "investigator", "visitor"];
 
@@ -279,14 +288,16 @@ document.getElementById("visitor").onchange = () => {
     const groupCode = (cols[1] || "").trim().toUpperCase();
     const ysaValue = (cols[2] || "").trim();
     const peValue = (cols[3] || "").trim();
+    const babyValue = (cols[4] || "").trim();
 
     if (!fullName) return;
 
     const member = {
       name: fullName,
       group: groupCode,
-      ysa: ysaValue === "1" ? 1 : 0,
-      pe: peValue === "1" ? 1 : 0
+      ysa: ["1","YSA"].includes(ysaValue.toUpperCase()) ? 1 : 0,
+      pe: ["1","PE"].includes(peValue.toUpperCase()) ? 1 : 0,
+      baby: ["1","BABY"].includes(babyValue.toUpperCase()) ? 1 : 0
     };
 
     // 聖餐会は全員
@@ -406,13 +417,12 @@ const sheetIndex = document.getElementById("sheetSelect").value;
 
   let csv = "";
   csv += `comment,${escapeCsv(commentForCsv)}\n`;
-  csv += "date,name,present,group,ysa,pe,missionary,investigator,visitor\n";
+  csv += "date,name,present,group,ysa,pe,baby,missionary,investigator,visitor\n";
 
   members.forEach(member => {
   const present = attendance[member.name] ? 1 : 0;
-  csv += `${escapeCsv(date)},${escapeCsv(member.name)},${present},${escapeCsv(member.group)},${member.ysa},${member.pe},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
-});
-
+  csv += `${escapeCsv(date)},${escapeCsv(member.name)},${present},${escapeCsv(member.group)},${member.ysa},${member.pe},${member.baby},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
+  });
   const fileName = `attendance_${sheetCode}_${date || "nodate"}.csv`;
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const file = new File([blob], fileName, { type: "text/csv" });
