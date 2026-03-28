@@ -6,66 +6,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
-    font-size: 20px;
-    padding: 15px;
-    line-height: 1.7;
-    letter-spacing: 0.02em;
-    }
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  font-size: 20px;
+  padding: 15px;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
 
-    h1, h2 {
-      margin-bottom: 10px;
-    }
+  background: #121212;
+  color: #e0e0e0;
+}
 
-    input[type="checkbox"] {
-      transform: scale(1.5);
-      margin-right: 10px;
-    }
+h1 {
+  color: #4da3ff;
+}
 
-    button {
-      font-size: 20px;
-      padding: 10px;
-      margin-top: 10px;
-      margin-right: 8px;
-    }
+.section {
+  margin-top: 18px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border-radius: 12px;
 
-    input, select {
-      font-size: 18px;
-      margin: 5px 0;
-      padding: 6px;
-    }
+  background: #1e1e1e;
+}
 
-    .section {
-      margin-top: 18px;
-      margin-bottom: 18px;
-      padding: 12px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
+.name-row {
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
 
-    .note {
-      font-size: 14px;
-      color: #666;
-      margin-top: 8px;
-    }
+.name-row:hover {
+  background: #2a2a2a;
+}
 
-    .name-row {
-      margin-bottom: 8px;
-    }
+input[type="checkbox"] {
+  transform: scale(1.5);
+  margin-right: 10px;
+}
 
-    #comment {
+button {
+  font-size: 18px;
+  padding: 10px 14px;
+  margin-top: 10px;
+  margin-right: 8px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #4da3ff;
+  color: white;
+
+  cursor: pointer;
+}
+
+button:hover {
+  background: #3a8be0;
+}
+
+select, input {
+  font-size: 18px;
+  padding: 6px;
+  border-radius: 6px;
+  border: none;
+
+  background: #2a2a2a;
+  color: white;
+}
+
+#comment {
   width: 100%;
   font-size: 18px;
   padding: 8px;
-  box-sizing: border-box;
 
   border: none;
   outline: none;
   background: transparent;
+  color: #ddd;
 }
 
 #comment::placeholder {
-  color: #aaa;
+  color: #777;
+}
+
+.note {
+  font-size: 14px;
+  color: #999;
 }
   </style>
 
