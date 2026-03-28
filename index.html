@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>出席簿</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    font-size: 20px;
+    padding: 15px;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    }
+
+    h1, h2 {
+      margin-bottom: 10px;
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.5);
+      margin-right: 10px;
+    }
+
+    button {
+      font-size: 20px;
+      padding: 10px;
+      margin-top: 10px;
+      margin-right: 8px;
+    }
+
+    input, select {
+      font-size: 18px;
+      margin: 5px 0;
+      padding: 6px;
+    }
+
+    .section {
+      margin-top: 18px;
+      margin-bottom: 18px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    .note {
+      font-size: 14px;
+      color: #666;
+      margin-top: 8px;
+    }
+
+    .name-row {
+      margin-bottom: 8px;
+    }
+
+    #comment {
+  width: 100%;
+  font-size: 18px;
+  padding: 8px;
+  box-sizing: border-box;
+
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+#comment::placeholder {
+  color: #aaa;
+}
+  </style>
+
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+  <h1>出席簿</h1>
+
+  日付: 
+<input type="date" id="date">
+<button onclick="resetAll()" style="background-color:#f44336;color:white;">
+  リセット
+</button>
+<br><br>
+
+  <div class="section">
+    
+    <div>
+      <label for="sheetSelect">名簿:</label>
+      <select id="sheetSelect"></select>
+      <button type="button" id="loadSheetBtn">名簿読込</button>
+    </div>
+
+    
+    
+
+   
+    
+  </div>
+
+  
+
+  <div class="section">
+    <h2>名簿</h2>
+    <div id="currentSource" class="note">現在の名簿: なし</div>
+    <div id="list"></div>
+  </div>
+
+<div id="extraCounts" style="margin-top:20px;">
+
+  宣教師:
+  <select id="missionary"></select><br>
+
+  求道者:
+  <select id="investigator"></select><br>
+
+  訪問者:
+  <select id="visitor"></select><br>
+
+  <div id="totalCount" style="margin-top:10px; font-weight:bold;">
+    合計: 0
+  </div>
+
+</div>
+
+<div class="section">
+  <textarea id="comment" rows="5" placeholder="メモ"></textarea>
+</div>
+
+<button onclick="exportCSV()">CSV出力</button>
+
+
+  <script>
+   let members = [];
+   let attendance = {};
+
+    // =========================
+    // ここを自分のシート情報に合わせる
+    // =========================
+    const SHEET_ID = "1cdU9TeB5dgmbtpNZq7x5_Kc4SsMiAub98yqzCjmw1ts";
+
+    const SHEETS = [
+  { name: "聖餐会", gid: "0", codes: ["ALL"], short: "SAC" },
+  { name: "日曜学校", gid: "0", codes: ["EQ", "RS"], short: "SS" },
+  { name: "神権会", gid: "0", codes: ["EQ"], short: "EQ" },
+  { name: "扶助協会", gid: "0", codes: ["RS"], short: "RS" },
+  { name: "アロン神権定員会", gid: "0", codes: ["YM"], short: "YM" },
+  { name: "若い女性", gid: "0", codes: ["YW"], short: "YW" },
+  { name: "プライマリー", gid: "0", codes: ["PR"], short: "PR" }
+];
+// =========================
+// 初期化
+// =========================
+initSheetSelect();
+function initCountSelects() {
+  const ids = ["missionary", "investigator", "visitor"];
+
+  ids.forEach(id => {
+    const select = document.getElementById(id);
+    select.innerHTML = "";
+
+    for (let i = 0; i <= 20; i++) {
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = i;
+      select.appendChild(option);
+    }
+  });
+}
+initCountSelects();
+bindEvents();
+loadData();
+
+function bindEvents() {
+  document.getElementById("loadSheetBtn").addEventListener("click", loadSelectedSheet);
+  document.getElementById("missionary").onchange = () => {
+  saveData();
+  updateTotalCount();
+};
+
+document.getElementById("investigator").onchange = () => {
+  saveData();
+  updateTotalCount();
+};
+
+document.getElementById("visitor").onchange = () => {
+  saveData();
+  updateTotalCount();
+};
+  document.getElementById("date").onchange = saveData;
+  document.getElementById("comment").oninput = saveData;
+}
+    function initSheetSelect() {
+      const select = document.getElementById("sheetSelect");
+      select.innerHTML = "";
+
+      SHEETS.forEach((sheet, index) => {
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = sheet.name;
+        select.appendChild(option);
+      });
+    }
+
+     async function loadSelectedSheet() {
+  const select = document.getElementById("sheetSelect");
+  const index = select.value;
+  const sheet = SHEETS[index];
+
+  if (!sheet) {
+    alert("名簿を選んでください");
+    return;
+  }
+
+  if (!sheet.gid || sheet.gid.includes("ここに")) {
+    alert(sheet.name + " の gid がまだ設定されていません");
+    return;
+  }
+
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${sheet.gid}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("取得失敗: " + response.status);
+    }
+
+    const text = await response.text();
+    loadCsvText(text, sheet.name, sheet.codes);
+    alert(sheet.name + " を読み込みました");
+  } catch (error) {
+    console.error(error);
+    alert("Google名簿の読み込みに失敗しました。\n共有設定やgidを確認してください。");
+  }
+}
+
+   function parseFilteredMembers(text, targetCodes) {
+  const lines = text
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line !== "");
+
+  const normalizedCodes = targetCodes.map(code => code.toUpperCase());
+  const result = [];
+
+  lines.forEach((line, index) => {
+    const cols = splitCsvLine(line);
+
+    // 1行目は見出し
+    if (index === 0) return;
+
+    const fullName = (cols[0] || "").trim();
+    const groupCode = (cols[1] || "").trim().toUpperCase();
+    const ysaValue = (cols[2] || "").trim();
+    const peValue = (cols[3] || "").trim();
+
+    if (!fullName) return;
+
+    const member = {
+      name: fullName,
+      group: groupCode,
+      ysa: ysaValue === "1" ? 1 : 0,
+      pe: peValue === "1" ? 1 : 0
+    };
+
+    // 聖餐会は全員
+    if (normalizedCodes.includes("ALL")) {
+      result.push(member);
+      return;
+    }
+
+    // 所属一致なら追加
+    if (normalizedCodes.includes(groupCode)) {
+      result.push(member);
+    }
+  });
+
+  return result;
+}
+
+    
+
+  function loadCsvText(text, sourceName = "", targetCodes = []) {
+  const parsedMembers = parseFilteredMembers(text, targetCodes);
+
+  if (parsedMembers.length === 0) {
+    alert("名簿データを読み取れませんでした");
+    return;
+  }
+
+  members = parsedMembers;
+
+  const oldAttendance = attendance;
+  attendance = {};
+
+  members.forEach(member => {
+    attendance[member.name] = oldAttendance[member.name] || false;
+  });
+
+  render();
+
+  if (sourceName) {
+    document.getElementById("currentSource").textContent = "現在の名簿: " + sourceName;
+  }
+
+  saveData();
+}
+
+    function splitCsvLine(line) {
+      const result = [];
+      let current = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          result.push(current);
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+
+      result.push(current);
+      return result;
+    }
+
+    function render() {
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  members.forEach(member => {
+    const div = document.createElement("div");
+    div.className = "name-row";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = attendance[member.name] || false;
+
+    checkbox.onchange = () => {
+      attendance[member.name] = checkbox.checked;
+      saveData();
+      updateTotalCount();
+    };
+
+    div.appendChild(checkbox);
+    div.appendChild(document.createTextNode(" " + member.name));
+    list.appendChild(div);
+  });
+
+  updateTotalCount();
+}
+   
+async function exportCSV() {
+  const date = document.getElementById("date").value;
+  const missionary = document.getElementById("missionary").value;
+  const investigator = document.getElementById("investigator").value;
+  const visitor = document.getElementById("visitor").value;
+const sheetIndex = document.getElementById("sheetSelect").value;
+  const sheet = SHEETS[sheetIndex];
+  const sheetCode = sheet?.short || "UNK";
+
+  const commentRaw = document.getElementById("comment")
+    ? document.getElementById("comment").value
+    : "";
+  // アプリ版互換
+  const commentForCsv = commentRaw
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n/g, "\\n") + "\\n";
+
+  let csv = "";
+  csv += `comment,${escapeCsv(commentForCsv)}\n`;
+  csv += "date,name,present,group,ysa,pe,missionary,investigator,visitor\n";
+
+  members.forEach(member => {
+  const present = attendance[member.name] ? 1 : 0;
+  csv += `${escapeCsv(date)},${escapeCsv(member.name)},${present},${escapeCsv(member.group)},${member.ysa},${member.pe},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
+});
+
+  const fileName = `attendance_${sheetCode}_${date || "nodate"}.csv`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const file = new File([blob], fileName, { type: "text/csv" });
+
+  // 1) まず共有を試す（iPhone / Android で外部へ出しやすい）
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: fileName
+      });
+      return;
+    }
+  } catch (e) {
+    console.log("share(files)失敗:", e);
+  }
+
+  // 2) 次に保存ダイアログを試す（主に対応ブラウザ向け）
+  try {
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [
+          {
+            description: "CSV file",
+            accept: { "text/csv": [".csv"] }
+          }
+        ]
+      });
+
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    }
+  } catch (e) {
+    console.log("showSaveFilePicker失敗またはキャンセル:", e);
+  }
+
+  // 3) 最後の保険：従来のダウンロード
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll() {
+  if (!confirm("すべてリセットして今日の日付にしますか？")) return;
+
+  // 出席チェックを全部外す
+  members.forEach(member => {
+  attendance[member.name] = false;
+});
+
+  // 人数リセット
+  document.getElementById("missionary").value = 0;
+  document.getElementById("investigator").value = 0;
+  document.getElementById("visitor").value = 0;
+
+  // コメントリセット
+  document.getElementById("comment").value = "";
+
+  // 今日の日付セット
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const todayStr = `${yyyy}-${mm}-${dd}`;
+
+  document.getElementById("date").value = todayStr;
+
+  render();
+  saveData();
+}
+
+    function escapeCsv(value) {
+      const str = String(value ?? "");
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+   function saveData() {
+  const data = {
+  members: members,
+  attendance: attendance,
+  missionary: document.getElementById("missionary").value,
+  investigator: document.getElementById("investigator").value,
+  visitor: document.getElementById("visitor").value,
+  comment: document.getElementById("comment").value,
+  date: document.getElementById("date").value,
+  currentSourceText: document.getElementById("currentSource").textContent
+};
+
+  localStorage.setItem("attendanceData", JSON.stringify(data));
+}
+
+    function loadData() {
+  const saved = localStorage.getItem("attendanceData");
+  if (!saved) return;
+
+  const data = JSON.parse(saved);
+
+  members = data.members || [];
+  attendance = data.attendance || {};
+
+  document.getElementById("missionary").value = data.missionary || 0;
+  document.getElementById("investigator").value = data.investigator || 0;
+  document.getElementById("visitor").value = data.visitor || 0;
+  document.getElementById("comment").value = data.comment || "";
+  document.getElementById("date").value = data.date || "";
+
+  if (data.currentSourceText) {
+    document.getElementById("currentSource").textContent = data.currentSourceText;
+  }
+
+  render();
+  updateTotalCount();
+}
+
+function updateTotalCount() {
+  // ✓の人数
+  let presentCount = 0;
+  members.forEach(member => {
+  if (attendance[member.name]) presentCount++;
+  });
+  // 各人数
+  const missionary = parseInt(document.getElementById("missionary").value || 0);
+  const investigator = parseInt(document.getElementById("investigator").value || 0);
+  const visitor = parseInt(document.getElementById("visitor").value || 0);
+
+  const total = presentCount + missionary + investigator + visitor;
+
+  document.getElementById("totalCount").textContent = "合計: " + total;
+}
+  </script>
+
+</body>
+</html>
