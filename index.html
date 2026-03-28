@@ -12,12 +12,12 @@
   line-height: 1.7;
   letter-spacing: 0.02em;
 
-  background: #121212;
-  color: #e0e0e0;
+  background: #f7f9fc;
+  color: #333;
 }
 
 h1 {
-  color: #4da3ff;
+  color: #2c7be5;
 }
 
 .section {
@@ -26,17 +26,18 @@ h1 {
   padding: 14px;
   border-radius: 12px;
 
-  background: #1e1e1e;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 .name-row {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   padding: 6px 10px;
   border-radius: 8px;
 }
 
 .name-row:hover {
-  background: #2a2a2a;
+  background: #eef5ff;
 }
 
 input[type="checkbox"] {
@@ -53,24 +54,24 @@ button {
   border: none;
   border-radius: 8px;
 
-  background: #4da3ff;
+  background: #2c7be5;
   color: white;
 
   cursor: pointer;
 }
 
 button:hover {
-  background: #3a8be0;
+  background: #1a68d1;
 }
 
 select, input {
   font-size: 18px;
   padding: 6px;
   border-radius: 6px;
-  border: none;
+  border: 1px solid #ddd;
 
-  background: #2a2a2a;
-  color: white;
+  background: white;
+  color: #333;
 }
 
 #comment {
@@ -81,16 +82,16 @@ select, input {
   border: none;
   outline: none;
   background: transparent;
-  color: #ddd;
+  color: #333;
 }
 
 #comment::placeholder {
-  color: #777;
+  color: #aaa;
 }
 
 .note {
   font-size: 14px;
-  color: #999;
+  color: #888;
 }
   </style>
 
@@ -323,7 +324,10 @@ document.getElementById("visitor").onchange = () => {
   });
 
   render();
-
+  
+  if (attendance[member.name]) {
+    div.style.background = "#dbe9ff";
+  }
   if (sourceName) {
     document.getElementById("currentSource").textContent = "現在の名簿: " + sourceName;
   }
